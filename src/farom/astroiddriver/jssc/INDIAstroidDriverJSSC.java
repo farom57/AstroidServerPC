@@ -2,6 +2,7 @@ package farom.astroiddriver.jssc;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.DateFormat;
 import java.util.Date;
 
 import farom.astroiddriver.CmdMessage;
@@ -122,7 +123,7 @@ public class INDIAstroidDriverJSSC extends INDIAstroidDriver implements SerialPo
 			if (!serialPort.writeBytes(command.getBytes())) {
 				printMessage("error while sending data to the device");
 			}
-			System.out.println("Sent command:");
+			System.out.println(DateFormat.getTimeInstance().format(new Date())+" - Sent command:");
 			for (int i = 0; i < CmdMessage.MESSAGE_SIZE; i++) {
 				byte[] array = command.getBytes();
 				System.out.printf("%02X ", array[i]);
@@ -143,10 +144,10 @@ public class INDIAstroidDriverJSSC extends INDIAstroidDriver implements SerialPo
 	public void serialEvent(SerialPortEvent event) {
 		if (event.isRXCHAR()) {// If data is available
 
-			if (event.getEventValue() >= StatusMessage.MESSAGE_SIZE) {
+			if (event.getEventValue() == StatusMessage.MESSAGE_SIZE) {
 				try {
 					byte buffer[] = serialPort.readBytes(StatusMessage.MESSAGE_SIZE);
-					serialPort.readBytes(event.getEventValue() - StatusMessage.MESSAGE_SIZE);
+					//serialPort.readBytes(event.getEventValue() - StatusMessage.MESSAGE_SIZE);
 
 					if (StatusMessage.verify(buffer)) {
 						
@@ -162,17 +163,26 @@ public class INDIAstroidDriverJSSC extends INDIAstroidDriver implements SerialPo
 						
 						updateStatus();
 					} else {
-						System.out.println("invalid message (" + event.getEventValue() + "/"
+						printMessage(DateFormat.getTimeInstance().format(new Date())+" - invalid message");
+						System.out.println(DateFormat.getTimeInstance().format(new Date())+" - invalid message (" + event.getEventValue() + "/"
 								+ StatusMessage.MESSAGE_SIZE + " bytes):");
 						for (int i = 0; i < StatusMessage.MESSAGE_SIZE; i++) {
 							System.out.printf("%02X ", buffer[i]);
 						}
 						System.out.println("");
+						
 					}
 				} catch (SerialPortException e) {
 					e.printStackTrace();
 				}
 
+			}else if(event.getEventValue() > StatusMessage.MESSAGE_SIZE){
+				System.out.println("event: " + event.getEventValue());
+				try {
+					serialPort.readBytes(event.getEventValue());
+				} catch (SerialPortException e) {
+					e.printStackTrace();
+				}
 			}
 
 		}
