@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<driversList>
+	<devGroup group="Telescopes">
+		<device label="Astroid">
+			<driver name="Astroid">indi_astroid_telescope</driver>
+			<version>0.3</version>
+		</device>
+	</devGroup>
+	<devGroup group="Telescopes">
+		<device label="Astroid Simulator">
+			<driver name="Astroid Simulator">indi_astroid_simulator</driver>
+			<version>0.3</version>
+		</device>
+	</devGroup>
+</driversList>
