@@ -1,0 +1,3 @@
+#!/bin/bash
+java -cp /usr/share/java/IndiAstroidDriverPC.jar laazotea.indi.driver.INDIDriverRunner farom.astroiddriver.INDIAstroidDriverSimulator
+

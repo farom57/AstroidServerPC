@@ -3,6 +3,7 @@
  */
 package farom.astroidserver;
 
+import farom.astroiddriver.INDIAstroidDriverSimulator;
 import farom.astroiddriver.jssc.INDIAstroidDriverJSSC;
 import laazotea.indi.INDIException;
 import laazotea.indi.server.DefaultINDIServer;
@@ -17,7 +18,8 @@ public class AstroidServerPC extends DefaultINDIServer {
     public AstroidServerPC(){
     	super();
     	try {
-            loadJavaDriver(INDIAstroidDriverJSSC.class);
+            //loadJavaDriver(INDIAstroidDriverJSSC.class);
+            loadJavaDriver(INDIAstroidDriverSimulator.class);
           } catch (INDIException e) {
             e.printStackTrace();
 

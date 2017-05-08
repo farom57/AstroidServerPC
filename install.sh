@@ -1,4 +1,5 @@
 #!/bin/bash
+#mv AstroidServerPC.jar IndiAstroidDriverPC.jar
 cp indi_astroid_telescope /usr/bin/
 chmod +x /usr/bin/indi_astroid_telescope
 cp indi_astroid_simulator /usr/bin/

@@ -15,15 +15,21 @@
  *  along with INDI for Java Server.  If not, see 
  *  <http://www.gnu.org/licenses/>.
  */
-package farom.astroiddriver.jssc;
+package laazotea.indi.server.examples;
 
 import java.net.Socket;
-
-import farom.astroiddriver.INDIAstroidDriver;
 import laazotea.indi.INDIException;
-import laazotea.indi.driver.examples.INDIDriverExample;
+import laazotea.indi.driver.examples.RandomNumberGeneratorDriver;
 import laazotea.indi.server.DefaultINDIServer;
 
+/**
+ * An almost minimum INDI Server. It just has one working Driver:
+ * RandomNumberGeneratorDriver (please check the INDI for Java Driver examples)
+ * and it only accepts connections from 127.0.0.1 (localhost).
+ *
+ * @author S. Alonso (Zerjillo) [zerjioi at ugr.es]
+ * @version 1.21, April 4, 2012
+ */
 public class MinimumINDIServer extends DefaultINDIServer {
 
   /**
@@ -34,8 +40,7 @@ public class MinimumINDIServer extends DefaultINDIServer {
 
     // Loads the Java Driver. Please note that its class must be in the classpath.
     try {
-      loadJavaDriver(INDIAstroidDriver.class);
-//    	loadJavaDriver(INDIDriverExample.class);
+      loadJavaDriver(RandomNumberGeneratorDriver.class);
     } catch (INDIException e) {
       e.printStackTrace();
 
@@ -43,22 +48,21 @@ public class MinimumINDIServer extends DefaultINDIServer {
     }
   }
 
-  
   /**
-   * Accepts the client  (localhost).
+   * Accepts the client if it is 127.0.0.1 (localhost).
    *
    * @param socket
-   * @return <code>true</code> 
+   * @return <code>true</code> if it is the 127.0.0.1 host.
    */
   @Override
   protected boolean acceptClient(Socket socket) {
     byte[] address = socket.getInetAddress().getAddress();
 
-    //if ( (address[0] == 127) && (address[1] == 0) && (address[2] == 0) && (address[3] == 1) ) {
+    if ( (address[0] == 127) && (address[1] == 0) && (address[2] == 0) && (address[3] == 1) ) {
       return true;
-    //}
+    }
     
-    //return false;
+    return false;
   }
 
   /**
