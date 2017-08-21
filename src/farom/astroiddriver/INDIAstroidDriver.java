@@ -693,7 +693,7 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 					} catch (INDIException e) {
 						e.printStackTrace();
 					}
-					slewDESpeed = motionSpeed;
+					slewDESpeed = -motionSpeed;
 					updateSpeed();
 					TimerTask task = new TimerTask() {					
 						@Override
@@ -1064,10 +1064,10 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 				}
 	
 				if (motionWE.getValue() == SwitchStatus.ON) {
-					slewRASpeed = -motionSpeed;
+					slewRASpeed = motionSpeed;
 					telescopeMotionWEP.setState(PropertyStates.OK);
 				} else if (motionEE.getValue() == SwitchStatus.ON) {
-					slewRASpeed = motionSpeed;
+					slewRASpeed = -motionSpeed;
 					telescopeMotionWEP.setState(PropertyStates.OK);
 				} else {
 					slewRASpeed = 0;
