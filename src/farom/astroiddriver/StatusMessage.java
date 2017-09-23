@@ -9,15 +9,17 @@ import java.util.Date;
  * @author farom
  */
 public class StatusMessage{
-	public static final int MESSAGE_SIZE = 31;
+	public static final int MESSAGE_SIZE = 39;
 	protected long time;
 	protected int msCount;
 	protected int stepHA;
 	protected int stepDE;
 	protected float uStepHA;
 	protected float uStepDE;
-	protected float moveSpeedRA;
+	protected float moveSpeedHA;
 	protected float moveSpeedDE;
+	protected float powerHA;
+	protected float powerDE;
 	protected int ticks;
     
 	/**
@@ -31,21 +33,25 @@ public class StatusMessage{
         stepDE = ByteBuffer.wrap(buffer,8,4).order(ByteOrder.BIG_ENDIAN).getInt();
         uStepHA = ByteBuffer.wrap(buffer,12,4).order(ByteOrder.BIG_ENDIAN).getFloat();
         uStepDE = ByteBuffer.wrap(buffer,16,4).order(ByteOrder.BIG_ENDIAN).getFloat();
-        moveSpeedRA = ByteBuffer.wrap(buffer,20,4).order(ByteOrder.BIG_ENDIAN).getFloat();
+        moveSpeedHA = ByteBuffer.wrap(buffer,20,4).order(ByteOrder.BIG_ENDIAN).getFloat();
         moveSpeedDE = ByteBuffer.wrap(buffer,24,4).order(ByteOrder.BIG_ENDIAN).getFloat();
         ticks = parseInt(buffer[28],buffer[29]);
+        powerHA = ByteBuffer.wrap(buffer,30,4).order(ByteOrder.BIG_ENDIAN).getFloat();
+        powerDE = ByteBuffer.wrap(buffer,34,4).order(ByteOrder.BIG_ENDIAN).getFloat();
 	}
 	
-	public StatusMessage(int ms, int HA, int DE, float uHA, float uDE, float mRA, float mDE, int tks){
+	public StatusMessage(int ms, int HA, int DE, float uHA, float uDE, float mHA, float mDE, int tks, float pHA, float pDE){
 		time = (new Date()).getTime();
 		msCount = ms;
 		stepHA= HA;
 		stepDE = DE;
 		uStepHA = uHA;
 		uStepDE = uDE;
-		moveSpeedRA = mRA;
+		moveSpeedHA = mHA;
 		moveSpeedDE = mDE;
-		ticks = tks;		
+		ticks = tks;
+		powerHA = pHA;
+		powerDE = pDE;
 	}
 	
 	/**
@@ -92,14 +98,16 @@ public class StatusMessage{
         stepDE = 0;
         uStepHA = 0;
         uStepDE = 0;
-        moveSpeedRA=0;
+        moveSpeedHA=0;
         moveSpeedDE=0;
         ticks = 0;
+        powerHA = 0;
+        powerDE= 0;
 	}
 	
 	@Override
 	public String toString(){
-		return "recieved: "+(new Date(time))+"\nmsCount: "+msCount+"\nstepRA: "+stepHA+"\nstepDE: "+stepDE+"\nuStepRA: "+uStepHA+"\nuStepDE: "+uStepDE+"\nmoveSpeedRA: "+moveSpeedRA+"\nmoveSpeedDE: "+moveSpeedDE+"\nticks:"+ticks+"\n";			
+		return "recieved: "+(new Date(time))+"\nmsCount: "+msCount+"\nstepHA: "+stepHA+"\nstepDE: "+stepDE+"\nuStepHA: "+uStepHA+"\nuStepDE: "+uStepDE+"\nmoveSpeedHA: "+moveSpeedHA+"\nmoveSpeedDE: "+moveSpeedDE+"\nticks:"+ticks+"\npowerHA:"+powerHA+"\npowerDE:"+powerDE+"\n";			
 	}
 
 	/**
@@ -124,7 +132,7 @@ public class StatusMessage{
 	}
 
 	/**
-	 * @return the stepRA
+	 * @return the stepHA
 	 */
 	public int getStepHA() {
 		return stepHA;
@@ -138,9 +146,9 @@ public class StatusMessage{
 	}
 
 	/**
-	 * @return the uStepRA
+	 * @return the uStepHA
 	 */
-	public float getuStepRA() {
+	public float getuStepHA() {
 		return uStepHA;
 	}
 
@@ -152,10 +160,10 @@ public class StatusMessage{
 	}
 
 	/**
-	 * @return the moveSpeedRA
+	 * @return the moveSpeedHA
 	 */
-	public float getMoveSpeedRA() {
-		return moveSpeedRA;
+	public float getMoveSpeedHA() {
+		return moveSpeedHA;
 	}
 
 	/**
@@ -178,5 +186,20 @@ public class StatusMessage{
 	public double getDE() {
 		return (double)stepDE + (double)uStepDE/1024.;
 	}
+	
+	/**
+	 * @return the powerHA
+	 */
+	public float getPowerHA() {
+		return powerHA;
+	}
+
+	/**
+	 * @return the powerDE
+	 */
+	public float getPowerDE() {
+		return powerDE;
+	}
+
 	
 }

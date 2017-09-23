@@ -4,34 +4,42 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 public class CmdMessage {
-	public static final int MESSAGE_SIZE = 11;
+	public static final int MESSAGE_SIZE = 19;
 	public static final int TICKS_OFF = 0;
 	public static final int TICKS_FOCUS = 1;
 	public static final int TICKS_EXPOSE = 2;
 	public static final int TICKS_EXPOSE_FOCUS = 3;
-	protected float speedRA;
+	protected float speedHA;
 	protected float speedDE;
 	protected int	ticks;
+	private float powerDE;
+	private float powerHA;
 	
-	public CmdMessage(float moveSpeedRA,float moveSpeedDE, int ticksServo) {
-		speedRA=moveSpeedRA;
+	public CmdMessage(float moveSpeedHA,float moveSpeedDE, int ticksServo, float spowerHA,float spowerDE) {
+		speedHA=moveSpeedHA;
 		speedDE=moveSpeedDE;
 		ticks=ticksServo;
+		powerHA=spowerHA;
+		powerDE=spowerDE;
 	}
 	
 	public CmdMessage() {
-		speedRA=0;
+		speedHA=0;
 		speedDE=0;
 		ticks=0;
+		powerHA=1;
+		powerDE=1;
 	}
 	
 	public byte[] getBytes(){
 		ByteBuffer buffer = ByteBuffer.allocate(MESSAGE_SIZE);
 		buffer.order(ByteOrder.BIG_ENDIAN);
-		buffer.putFloat(0, speedRA);
+		buffer.putFloat(0, speedHA);
 		buffer.putFloat(4, speedDE);
 		buffer.put(8,(byte) ((ticks/256) & 0xFF));
 		buffer.put(9,(byte) (ticks & 0xFF));
+		buffer.putFloat(10, powerHA);
+		buffer.putFloat(14, powerDE);
 		
 		
 		byte[] array = buffer.array();
@@ -50,17 +58,17 @@ public class CmdMessage {
 	}
 
 	/**
-	 * @return the speedRA
+	 * @return the speedHA
 	 */
-	public float getSpeedRA() {
-		return speedRA;
+	public float getSpeedHA() {
+		return speedHA;
 	}
 
 	/**
-	 * @param speedRA the speedRA to set
+	 * @param speedHA the speedHA to set
 	 */
-	public void setSpeedRA(float speedRA) {
-		this.speedRA = speedRA;
+	public void setSpeedHA(float speedHA) {
+		this.speedHA = speedHA;
 	}
 
 	/**
@@ -90,6 +98,15 @@ public class CmdMessage {
 	 */
 	public void setTicks(int ticks) {
 		this.ticks = ticks;
+	}
+
+
+	public void setPowerHA(float powerHA) {
+		this.powerHA = powerHA;
+	}
+	
+	public void setPowerDE(float powerDE) {
+		this.powerDE = powerDE;
 	}
 
 }

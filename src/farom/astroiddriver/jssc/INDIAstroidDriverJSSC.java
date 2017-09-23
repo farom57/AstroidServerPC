@@ -2,6 +2,7 @@ package farom.astroiddriver.jssc;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.text.DateFormat;
 import java.util.Date;
 
@@ -13,6 +14,7 @@ import jssc.SerialPortEvent;
 import jssc.SerialPortEventListener;
 import jssc.SerialPortException;
 import jssc.SerialPortList;
+import jssc.SerialPortTimeoutException;
 import laazotea.indi.Constants;
 import laazotea.indi.INDIException;
 import laazotea.indi.Constants.PropertyStates;
@@ -29,6 +31,7 @@ public class INDIAstroidDriverJSSC extends INDIAstroidDriver implements SerialPo
 	private SerialPort serialPort;
 	private INDITextProperty devicePortP; // DEVICE_PORT
 	private INDITextElement devicePortE; // PORT
+	private ByteBuffer buffer;
 	
 	/**
 	 * @param inputStream
@@ -53,6 +56,7 @@ public class INDIAstroidDriverJSSC extends INDIAstroidDriver implements SerialPo
 			printMessage("Serial port not found");
 		}
 		
+		buffer=ByteBuffer.allocate(255);
 	}
 	
 	/**
@@ -142,23 +146,90 @@ public class INDIAstroidDriverJSSC extends INDIAstroidDriver implements SerialPo
 	 */
 	@Override
 	public void serialEvent(SerialPortEvent event) {
-		if (event.isRXCHAR()) {// If data is available
+		if (event.isRXCHAR()) {
 
-			if (event.getEventValue() == StatusMessage.MESSAGE_SIZE) {
+			byte[] localBuffer;
+			byte[] localBuffer2 = new byte[StatusMessage.MESSAGE_SIZE];
+			
+			try {
+				localBuffer = serialPort.readBytes();
+
+				//System.out.println("Read " + localBuffer.length + "bytes");
+				if(localBuffer.length>buffer.remaining()) {
+					//System.out.println(""+localBuffer.length+"bytes droped");
+					return;
+				}
+				buffer.put(localBuffer);
+				//System.out.println("buffer.position() = " + buffer.position());
+				if(buffer.position()>StatusMessage.MESSAGE_SIZE) {
+					buffer.flip();
+					byte startFlag;
+					startFlag = buffer.get();
+					while(startFlag!=0x55) { 
+						if(buffer.remaining()>StatusMessage.MESSAGE_SIZE) {
+							System.out.print("1 byte droped");
+							System.out.printf("0x%02X ",startFlag);
+							System.out.println("");
+							startFlag = buffer.get();
+						}else{
+							System.out.print("1 byte droped");
+							System.out.printf("0x%02X ",startFlag);
+							System.out.println(", waiting for data");
+							buffer.compact();
+							return;
+						}
+					}
+
+					buffer.get(localBuffer2, 0, StatusMessage.MESSAGE_SIZE);
+					buffer.compact();
+					if (StatusMessage.verify(localBuffer2)) {						
+						lastStatusMessage = new StatusMessage(localBuffer2);
+						System.out.println("Valid message:");
+						for (int i = 0; i < StatusMessage.MESSAGE_SIZE; i++) {
+							System.out.printf("%02X ", localBuffer2[i]);
+						}
+						System.out.println("");
+						System.out.println(lastStatusMessage);
+						updateStatus();
+					}else {
+						System.out.println("Invalid message:");
+						for (int i = 0; i < StatusMessage.MESSAGE_SIZE; i++) {
+							System.out.printf("%02X ", localBuffer2[i]);
+						}
+						System.out.println("");
+					}
+				}
+			} catch (SerialPortException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}catch (NullPointerException e) {
+				
+			}
+
+
+		}
+
+
+		
+		/*System.out.println("SerialPortEvent type="+event.getEventType());
+		if (event.isRXCHAR()) {// If data is available
+			System.out.println("=RXCHAR");
+			System.out.println("size="+event.getEventValue());
+			//if (event.getEventValue() == StatusMessage.MESSAGE_SIZE) {
 				try {
-					byte buffer[] = serialPort.readBytes(StatusMessage.MESSAGE_SIZE);
+					byte buffer[] = serialPort.readBytes(StatusMessage.MESSAGE_SIZE, 100);
 					//serialPort.readBytes(event.getEventValue() - StatusMessage.MESSAGE_SIZE);
 
 					if (StatusMessage.verify(buffer)) {
 						
 						lastStatusMessage = new StatusMessage(buffer);
-//						System.out.println("valid message (" + event.getEventValue() + "/"
-//								+ StatusMessage.MESSAGE_SIZE + " bytes):");
-//						for (int i = 0; i < StatusMessage.MESSAGE_SIZE; i++) {
-//							System.out.printf("%02X ", buffer[i]);
-//						}
-//						System.out.println("");
-//						System.out.println(lastStatusMessage);
+						System.out.println("valid message (" + event.getEventValue() + "/"
+								+ StatusMessage.MESSAGE_SIZE + " bytes):");
+						for (int i = 0; i < StatusMessage.MESSAGE_SIZE; i++) {
+							System.out.printf("%02X ", buffer[i]);
+						}
+						System.out.println("");
+						System.out.println(lastStatusMessage);
 						
 						
 						updateStatus();
@@ -174,18 +245,26 @@ public class INDIAstroidDriverJSSC extends INDIAstroidDriver implements SerialPo
 					}
 				} catch (SerialPortException e) {
 					e.printStackTrace();
+				} catch (SerialPortTimeoutException e) {
+					System.out.println("timed out");
+					try {
+						serialPort.purgePort(SerialPort.PURGE_RXCLEAR);
+					} catch (SerialPortException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
 				}
 
-			}else if(event.getEventValue() > StatusMessage.MESSAGE_SIZE){
-				System.out.println("event: " + event.getEventValue());
-				try {
-					serialPort.readBytes(event.getEventValue());
-				} catch (SerialPortException e) {
-					e.printStackTrace();
-				}
-			}
+			//}else{
+			//	System.out.println("event: " + event.getEventValue());
+			//	try {
+			//		serialPort.readBytes(event.getEventValue());
+			//	} catch (SerialPortException e) {
+			//		e.printStackTrace();
+			//	}
+			//}
 
-		}
+		}*/
 	}
 
 

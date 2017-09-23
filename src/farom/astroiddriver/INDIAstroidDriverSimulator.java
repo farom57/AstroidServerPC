@@ -24,15 +24,15 @@ public class INDIAstroidDriverSimulator extends INDIAstroidDriver {
 	private static int TIMEOUT_STATUS = 200;
 	
 	private int ms_count=0;
-	private int step_ra=0;
+	private int step_ha=0;
 	private int step_de=0;
-	private float ustep_ra=0;
+	private float ustep_ha=0;
 	private float ustep_de=0;
-	private float move_speed_ra=1;
+	private float move_speed_ha=1;
 	private float move_speed_de=0;
 	private int ticks_servo = 0;
 	
-	private float speed_ra=SIDERAL_RATE*move_speed_ra;
+	private float speed_ha=SIDERAL_RATE*move_speed_ha;
 	private float speed_de=SIDERAL_RATE*move_speed_de;
 	
 	private boolean connected = false;
@@ -65,26 +65,26 @@ public class INDIAstroidDriverSimulator extends INDIAstroidDriver {
 	}
 
 	protected void sendStatus() {
-		lastStatusMessage = new StatusMessage(ms_count, step_ra, step_de, ustep_ra, ustep_de, move_speed_ra, move_speed_de,ticks_servo);
+		lastStatusMessage = new StatusMessage(ms_count, step_ha, step_de, ustep_ha, ustep_de, move_speed_ha, move_speed_de,ticks_servo, 1, 1);
 		//printMessage(lastStatusMessage.toString());
 		updateStatus();
 		
 	}
 
 	protected void updateStep() {
-	    float speed_ra=SIDERAL_RATE*move_speed_ra;
+	    float speed_ha=SIDERAL_RATE*move_speed_ha;
 	    float speed_de=SIDERAL_RATE*move_speed_de;
 	    
-	    ustep_ra+=speed_ra*UPDATE_TIME*1024.;
+	    ustep_ha+=speed_ha*UPDATE_TIME*1024.;
 	    ustep_de+=speed_de*UPDATE_TIME*1024.;
 
-	    if(ustep_ra>=1024.){
-	        ustep_ra-=1024.;
-	        step_ra++;
+	    if(ustep_ha>=1024.){
+	        ustep_ha-=1024.;
+	        step_ha++;
 	    }
-	    if(ustep_ra<0.){
-	        ustep_ra+=1024.;
-	        step_ra--;
+	    if(ustep_ha<0.){
+	        ustep_ha+=1024.;
+	        step_ha--;
 	    }
 	    if(ustep_de>=1024.){
 	        ustep_de-=1024.;
@@ -114,7 +114,7 @@ public class INDIAstroidDriverSimulator extends INDIAstroidDriver {
 
 	@Override
 	protected void sendCommand() {
-		move_speed_ra = command.getSpeedRA();
+		move_speed_ha = command.getSpeedHA();
 		move_speed_de = command.getSpeedDE();
 		ticks_servo = command.getTicks();
 		

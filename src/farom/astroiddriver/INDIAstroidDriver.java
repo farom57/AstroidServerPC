@@ -28,15 +28,6 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 	 */
 	private static final int STEP_BY_TURN = 50 * 3 * 144;
 
-	/**
-	 * if the motor direction is inverted
-	 */
-	private static final boolean INVERT_RA = true;
-
-	/**
-	 * if the motor direction is inverted
-	 */
-	private static final boolean INVERT_DE = true; //
 
 	/**
 	 * status turns red if no StatusMessage is received for
@@ -172,6 +163,10 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 	private INDITextProperty infoP;
 	private INDITextElement buildDateE;
 	private INDITextElement classNameE;
+	
+	private INDINumberProperty powerP;
+	private INDINumberElement powerRAE;
+	private INDINumberElement powerDEE;
 
 	
 	protected StatusMessage lastStatusMessage;
@@ -189,6 +184,8 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 	private double trackSpeed = 1;
 	private double slewDESpeed = 0;
 	private double slewRASpeed = 0;
+	private double powerHA = 1;
+	private double powerDE = 1;
 	private Date lastGotoUpdate;
 	
 
@@ -279,7 +276,7 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 				"%7.2f");
 		currentDERateE = new INDINumberElement(currentRateP, "CURRENT_DE_RATE", "DE rate (X)", 0, -2*MAX_SPEED, 2*MAX_SPEED, 0,
 				"%7.2f");
-		trackingRateE = new INDINumberElement(currentRateP, "TRACKING_RATE", "Tracking rate (X)", -1, -2*MAX_SPEED, 2*MAX_SPEED, 0,
+		trackingRateE = new INDINumberElement(currentRateP, "TRACKING_RATE", "Tracking rate (X)", 1, -2*MAX_SPEED, 2*MAX_SPEED, 0,
 				"%7.2f");
 		
 
@@ -347,6 +344,10 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		trackLunarE = new INDISwitchElement(trackRateP, "TRACK_LUNAR", "Lunar", Constants.SwitchStatus.OFF); // TRACK_LUNAR
 		trackCustomE = new INDISwitchElement(trackRateP, "TRACK_CUSTOM", "Off", Constants.SwitchStatus.OFF); // TRACK_CUSTOM
 		trackSpeed = 1;
+		
+		powerP = new INDINumberProperty(this, "MOTOR_POWER", "Motor Power", "Motion Control", Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW);		
+		powerRAE = new INDINumberElement(powerP, "POWER_RA", "RA power", 1, -9.99, 9.99, 0,"%7.2f");
+		powerDEE = new INDINumberElement(powerP, "POWER_DE", "DE power", 1, -9.99, 9.99, 0,"%7.2f");
 		
 		/*infoP = new INDITextProperty(this, "INFO", "Info", "Info", Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RO);
 		String buildDate;
@@ -568,6 +569,26 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 					}
 					
 				}
+				currentRateP.setState(PropertyStates.OK);
+				updateSpeed();
+				// "updateProperty" already performed in updateSpeed()
+
+			}
+			
+			// --- Power ---
+			if (property == powerP) {
+				powerP.setState(PropertyStates.BUSY);
+				for (int i = 0; i < elementsAndValues.length; i++) {
+					INDINumberElement el = elementsAndValues[i].getElement();
+					double val = elementsAndValues[i].getValue();
+					if (el == powerRAE) {
+						powerHA = val;
+					} else if (el == powerDEE) {
+						powerDE = val;
+					}
+					
+				}
+				powerP.setState(PropertyStates.OK);
 				updateSpeed();
 				// "updateProperty" already performed in updateSpeed()
 
@@ -1064,10 +1085,10 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 				}
 	
 				if (motionWE.getValue() == SwitchStatus.ON) {
-					slewRASpeed = motionSpeed;
+					slewRASpeed = -motionSpeed;
 					telescopeMotionWEP.setState(PropertyStates.OK);
 				} else if (motionEE.getValue() == SwitchStatus.ON) {
-					slewRASpeed = -motionSpeed;
+					slewRASpeed = motionSpeed;
 					telescopeMotionWEP.setState(PropertyStates.OK);
 				} else {
 					slewRASpeed = 0;
@@ -1317,7 +1338,8 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		addProperty(servoP);
 		addProperty(focuserIntervalometerP);
 		addProperty(trackRateP);
-
+		addProperty(powerP);
+		
 		syncCoordHA = getSiderealTime();
 		syncStepHA = 0;
 		syncCoordDE = 0;
@@ -1360,7 +1382,7 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		removeProperty(relFocusPosP);
 		removeProperty(absFocusPosP);
 		removeProperty(trackRateP);
-
+		removeProperty(powerP);
 	}
 
 	/**
@@ -1390,8 +1412,7 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 	 * @return the declination in deg (between -90deg and 270deg)
 	 */
 	protected double getDE(){
-		return mod360((lastStatusMessage.getDE() * (INVERT_DE ? -1 : 1) - syncStepDE) / STEP_BY_TURN * 360
-				* (sideEastE.getValue() == SwitchStatus.ON ? 1 : -1) + syncCoordDE +90)-90;
+		return mod360((lastStatusMessage.getDE() - syncStepDE) / STEP_BY_TURN * 360 * (sideEastE.getValue() == SwitchStatus.ON ? 1 : -1) + syncCoordDE +90)-90;
 	}
 	
 	/**
@@ -1428,7 +1449,7 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 	 * @return the hour angle in hours
 	 */
 	protected double getHA(){
-		return (lastStatusMessage.getHA() * (INVERT_RA ? 1 : -1) - syncStepHA) / STEP_BY_TURN * 24 + syncCoordHA;
+		return (lastStatusMessage.getHA()- syncStepHA) / STEP_BY_TURN * 24 + syncCoordHA;
 	}
 	
 	/**
@@ -1438,7 +1459,9 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 
 
 		eqCoordRAE.setValue(getRA2());
+		System.out.println("getRA2()=" + getRA2());
 		eqCoordDEE.setValue(getDE2());
+		System.out.println("getDE2()=" + getDE2());
 		currentTicksE.setValue((double)lastStatusMessage.getTicks());
 		command.setTicks(lastStatusMessage.getTicks());
 		
@@ -1460,9 +1483,9 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 	 */
 	private void syncCoordinates(double RA, double DE) {
 		syncCoordDE = DE;
-		syncStepDE = lastStatusMessage.getDE() * (INVERT_DE ? -1 : 1);
+		syncStepDE = lastStatusMessage.getDE();
 		syncCoordHA = getSiderealTime() - RA;
-		syncStepHA = lastStatusMessage.getHA() * (INVERT_RA ? 1 : -1);
+		syncStepHA = lastStatusMessage.getHA();
 		eqCoordP.setState(PropertyStates.OK);
 		updateStatus();
 	}
@@ -1696,18 +1719,25 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		}
 	}
 	
+	/**
+	 * On German equatorial mounts, a given celestial position can be pointed in
+	 * two ways. The counter-weight is generally down and the telescope up. -
+	 * East means that the telescope is pointing toward the east when the
+	 * counter-weight is down (and west when it is up). - West means that the
+	 * telescope is pointing toward the west when the counter-weight is down
+	 * (and east when it is up). When INVERT_DE = false and side = East, the
+	 * declination increase when the DE speed is positive
+	 */
 	private void updateSpeed(){
-		double speedDE, speedRA;
-		speedDE = 0;
-		speedRA = -trackSpeed;
+		double speedDE, speedHA;
 		
-		speedDE += slewDESpeed * (sideEastE.getValue() == SwitchStatus.ON ? 1 : -1);
-		speedRA += slewRASpeed;
+		speedDE = slewDESpeed * (sideEastE.getValue() == SwitchStatus.ON ? 1 : -1);
+		speedHA = trackSpeed-slewRASpeed; // because HA = LST-RA
 		
-		speedDE *= (INVERT_DE ? -1:1);
-		speedRA *= (INVERT_RA ? -1:1);
 		command.setSpeedDE((float)speedDE);
-		command.setSpeedRA((float)speedRA);
+		command.setSpeedHA((float)speedHA);
+		command.setPowerHA((float)powerHA);
+		command.setPowerDE((float)powerDE);
 		sendCommand();
 		
 		currentRARateE.setValue(slewRASpeed);
