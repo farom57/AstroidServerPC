@@ -37,8 +37,8 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 
 	private static final double GOTO_STOP_DISTANCE = 1. / 60.;
 	private static final double GOTO_SLOW_DISTANCE = 15. / 60.;
-	private static final float MAX_SPEED = 240;
-	private static final float GOTO_SPEED = 240;
+	private static final float MAX_SPEED = 623*2;
+	private static final float GOTO_SPEED = 400;
 	private static final float GOTO_ACC_T = 5;
 	private static final float GOTO_SLOW_SPEED = GOTO_SPEED/10;
 
@@ -266,17 +266,17 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		
 		motionRateP = new INDINumberProperty(this, "TELESCOPE_MOTION_RATE", "Motion rate", "Motion Control",
 				Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW);
-		motionRateE = new INDINumberElement(motionRateP, "MOTION_RATE", "Motion rate (X)", MAX_SPEED, 0., MAX_SPEED, 0,
+		motionRateE = new INDINumberElement(motionRateP, "MOTION_RATE", "Motion rate (X)", GOTO_SPEED, 0., MAX_SPEED, 0,
 				"%7.2f");
 		motionSpeed = motionRateE.getValue();
 		
 		currentRateP = new INDINumberProperty(this, "TELESCOPE_CURRENT_RATE", "Current rate", "Motion Control",
 				Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW);		
-		currentRARateE = new INDINumberElement(currentRateP, "CURRENT_RA_RATE", "RA rate (X)", 0, -2*MAX_SPEED, 2*MAX_SPEED, 0,
+		currentRARateE = new INDINumberElement(currentRateP, "CURRENT_RA_RATE", "RA rate (X)", 0, -MAX_SPEED, MAX_SPEED, 0,
 				"%7.2f");
-		currentDERateE = new INDINumberElement(currentRateP, "CURRENT_DE_RATE", "DE rate (X)", 0, -2*MAX_SPEED, 2*MAX_SPEED, 0,
+		currentDERateE = new INDINumberElement(currentRateP, "CURRENT_DE_RATE", "DE rate (X)", 0, -MAX_SPEED, MAX_SPEED, 0,
 				"%7.2f");
-		trackingRateE = new INDINumberElement(currentRateP, "TRACKING_RATE", "Tracking rate (X)", 1, -2*MAX_SPEED, 2*MAX_SPEED, 0,
+		trackingRateE = new INDINumberElement(currentRateP, "TRACKING_RATE", "Tracking rate (X)", 1, -MAX_SPEED, MAX_SPEED, 0,
 				"%7.2f");
 		
 
