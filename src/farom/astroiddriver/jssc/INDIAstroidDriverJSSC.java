@@ -190,6 +190,7 @@ public class INDIAstroidDriverJSSC extends INDIAstroidDriver implements SerialPo
 						}
 						System.out.println("");
 						System.out.println(lastStatusMessage);
+						System.out.println("/n");
 						updateStatus();
 					}else {
 						System.out.println("Invalid message:");

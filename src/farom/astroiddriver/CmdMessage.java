@@ -4,31 +4,31 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 public class CmdMessage {
-	public static final int MESSAGE_SIZE = 19;
-	public static final int TICKS_OFF = 0;
-	public static final int TICKS_FOCUS = 1;
-	public static final int TICKS_EXPOSE = 2;
-	public static final int TICKS_EXPOSE_FOCUS = 3;
+	public static final int MESSAGE_SIZE = 32;
 	protected float speedHA;
 	protected float speedDE;
-	protected int	ticks;
-	private float powerDE;
-	private float powerHA;
-	
-	public CmdMessage(float moveSpeedHA,float moveSpeedDE, int ticksServo, float spowerHA,float spowerDE) {
-		speedHA=moveSpeedHA;
-		speedDE=moveSpeedDE;
-		ticks=ticksServo;
-		powerHA=spowerHA;
-		powerDE=spowerDE;
-	}
+	protected float powerDE;
+	protected float powerHA;
+	protected int powerAUX1=0;
+	protected int powerAUX2=0;
+	protected int powerAUX3=0;
+	protected byte bulbState=0;
+	protected float speedFOCUS=0;
+	protected float powerFOCUS=0;
+
 	
 	public CmdMessage() {
 		speedHA=0;
 		speedDE=0;
-		ticks=0;
 		powerHA=1;
 		powerDE=1;
+		powerAUX1=0;
+		powerAUX2=0;
+		powerAUX3=0;
+		bulbState=0;
+		speedFOCUS=0;
+		powerFOCUS=0;
+		
 	}
 	
 	public byte[] getBytes(){
@@ -36,11 +36,17 @@ public class CmdMessage {
 		buffer.order(ByteOrder.BIG_ENDIAN);
 		buffer.putFloat(0, speedHA);
 		buffer.putFloat(4, speedDE);
-		buffer.put(8,(byte) ((ticks/256) & 0xFF));
-		buffer.put(9,(byte) (ticks & 0xFF));
-		buffer.putFloat(10, powerHA);
-		buffer.putFloat(14, powerDE);
-		
+		buffer.putFloat(8, powerHA);
+		buffer.putFloat(12, powerDE);
+		buffer.put(16,(byte) ((powerAUX1/256) & 0xFF));
+		buffer.put(17,(byte) (powerAUX1 & 0xFF));
+		buffer.put(18,(byte) ((powerAUX2/256) & 0xFF));
+		buffer.put(19,(byte) (powerAUX2 & 0xFF));
+		buffer.put(20,(byte) ((powerAUX3/256) & 0xFF));
+		buffer.put(21,(byte) (powerAUX3 & 0xFF));
+		buffer.put(22,(byte) (bulbState & 0xFF));
+		buffer.putFloat(23, speedFOCUS);
+		buffer.putFloat(27, powerFOCUS);
 		
 		byte[] array = buffer.array();
 		int sum = 0;
@@ -84,22 +90,6 @@ public class CmdMessage {
 	public void setSpeedDE(float speedDE) {
 		this.speedDE = speedDE;
 	}
-	
-
-	/**
-	 * @return the ticks
-	 */
-	public int getTicks() {
-		return ticks;
-	}
-
-	/**
-	 * @param ticks the ticks to set
-	 */
-	public void setTicks(int ticks) {
-		this.ticks = ticks;
-	}
-
 
 	public void setPowerHA(float powerHA) {
 		this.powerHA = powerHA;
@@ -108,5 +98,55 @@ public class CmdMessage {
 	public void setPowerDE(float powerDE) {
 		this.powerDE = powerDE;
 	}
+
+	public int getPowerAUX1() {
+		return powerAUX1;
+	}
+
+	public void setPowerAUX1(int powerAUX1) {
+		this.powerAUX1 = powerAUX1;
+	}
+
+	public int getPowerAUX2() {
+		return powerAUX2;
+	}
+
+	public void setPowerAUX2(int powerAUX2) {
+		this.powerAUX2 = powerAUX2;
+	}
+
+	public int getPowerAUX3() {
+		return powerAUX3;
+	}
+
+	public void setPowerAUX3(int powerAUX3) {
+		this.powerAUX3 = powerAUX3;
+	}
+
+	public float getSpeedFOCUS() {
+		return speedFOCUS;
+	}
+
+	public void setSpeedFOCUS(float speedFOCUS) {
+		this.speedFOCUS = speedFOCUS;
+	}
+
+	public float getPowerFOCUS() {
+		return powerFOCUS;
+	}
+
+	public void setPowerFOCUS(float powerFOCUS) {
+		this.powerFOCUS = powerFOCUS;
+	}
+	
+	public void enableBulb() {
+		this.bulbState=1;
+	}
+	
+	public void disableBulb() {
+		this.bulbState=0;
+	}
+	
+	
 
 }

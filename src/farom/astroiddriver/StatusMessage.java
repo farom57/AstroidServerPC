@@ -9,7 +9,7 @@ import java.util.Date;
  * @author farom
  */
 public class StatusMessage{
-	public static final int MESSAGE_SIZE = 39;
+	public static final int MESSAGE_SIZE = 56;
 	protected long time;
 	protected int msCount;
 	protected int stepHA;
@@ -20,8 +20,14 @@ public class StatusMessage{
 	protected float moveSpeedDE;
 	protected float powerHA;
 	protected float powerDE;
-	protected int ticks;
-    
+	protected int powerAUX1;
+	protected int powerAUX2;
+	protected int powerAUX3;
+	protected byte bulbState;
+	protected int stepFOCUS;
+	protected float uStepFOCUS;
+	protected float moveSpeedFOCUS;
+	
 	/**
 	 * Create the StatusMessage from the buffer
 	 * @param buffer
@@ -35,12 +41,18 @@ public class StatusMessage{
         uStepDE = ByteBuffer.wrap(buffer,16,4).order(ByteOrder.BIG_ENDIAN).getFloat();
         moveSpeedHA = ByteBuffer.wrap(buffer,20,4).order(ByteOrder.BIG_ENDIAN).getFloat();
         moveSpeedDE = ByteBuffer.wrap(buffer,24,4).order(ByteOrder.BIG_ENDIAN).getFloat();
-        ticks = parseInt(buffer[28],buffer[29]);
-        powerHA = ByteBuffer.wrap(buffer,30,4).order(ByteOrder.BIG_ENDIAN).getFloat();
-        powerDE = ByteBuffer.wrap(buffer,34,4).order(ByteOrder.BIG_ENDIAN).getFloat();
+        powerHA = ByteBuffer.wrap(buffer,28,4).order(ByteOrder.BIG_ENDIAN).getFloat();
+        powerDE = ByteBuffer.wrap(buffer,32,4).order(ByteOrder.BIG_ENDIAN).getFloat();
+        powerAUX1 = parseInt(buffer[36],buffer[37]);
+        powerAUX2 = parseInt(buffer[38],buffer[39]);
+        powerAUX3 = parseInt(buffer[40],buffer[41]);
+        bulbState = buffer[42];
+        stepFOCUS = ByteBuffer.wrap(buffer,43,4).order(ByteOrder.BIG_ENDIAN).getInt();
+        uStepFOCUS = ByteBuffer.wrap(buffer,47,4).order(ByteOrder.BIG_ENDIAN).getFloat();
+        moveSpeedFOCUS = ByteBuffer.wrap(buffer,51,4).order(ByteOrder.BIG_ENDIAN).getFloat();
 	}
 	
-	public StatusMessage(int ms, int HA, int DE, float uHA, float uDE, float mHA, float mDE, int tks, float pHA, float pDE){
+	public StatusMessage(int ms, int HA, int DE, float uHA, float uDE, float mHA, float mDE, float pHA, float pDE, int pA1, int pA2,  int pA3, byte bulb, int FO, float uFO, float mFO){
 		time = (new Date()).getTime();
 		msCount = ms;
 		stepHA= HA;
@@ -49,9 +61,15 @@ public class StatusMessage{
 		uStepDE = uDE;
 		moveSpeedHA = mHA;
 		moveSpeedDE = mDE;
-		ticks = tks;
 		powerHA = pHA;
 		powerDE = pDE;
+		powerAUX1 = pA1;
+		powerAUX2 = pA2;
+		powerAUX3 = pA3;
+		bulbState = bulb;
+		stepFOCUS = FO;
+		uStepFOCUS = uFO;
+		moveSpeedFOCUS = mFO;
 	}
 	
 	/**
@@ -100,22 +118,15 @@ public class StatusMessage{
         uStepDE = 0;
         moveSpeedHA=0;
         moveSpeedDE=0;
-        ticks = 0;
         powerHA = 0;
         powerDE= 0;
 	}
 	
 	@Override
 	public String toString(){
-		return "recieved: "+(new Date(time))+"\nmsCount: "+msCount+"\nstepHA: "+stepHA+"\nstepDE: "+stepDE+"\nuStepHA: "+uStepHA+"\nuStepDE: "+uStepDE+"\nmoveSpeedHA: "+moveSpeedHA+"\nmoveSpeedDE: "+moveSpeedDE+"\nticks:"+ticks+"\npowerHA:"+powerHA+"\npowerDE:"+powerDE+"\n";			
+		return "recieved: "+(new Date(time))+"\nmsCount: "+msCount+"\nstepHA: "+stepHA+"\nstepDE: "+stepDE+"\nuStepHA: "+uStepHA+"\nuStepDE: "+uStepDE+"\nmoveSpeedHA: "+moveSpeedHA+"\nmoveSpeedDE: "+moveSpeedDE+"\npowerHA:"+powerHA+"\npowerDE:"+powerDE+"\npowerAux1:"+powerAUX1+"\npowerAux2:"+powerAUX2+"\npowerAux3:"+powerAUX3+"\nuStepFOCUS:"+uStepFOCUS+"\nstepFOCUS:"+stepFOCUS+"\nspeedFOCUS:"+moveSpeedFOCUS+"\n";			
 	}
 
-	/**
-	 * @return the ticks
-	 */
-	public int getTicks() {
-		return ticks;
-	}
 
 	/**
 	 * @return the time
@@ -201,5 +212,64 @@ public class StatusMessage{
 		return powerDE;
 	}
 
+	public int getPowerAUX1() {
+		return powerAUX1;
+	}
+
+	public void setPowerAUX1(int powerAUX1) {
+		this.powerAUX1 = powerAUX1;
+	}
+
+	public int getPowerAUX2() {
+		return powerAUX2;
+	}
+
+	public void setPowerAUX2(int powerAUX2) {
+		this.powerAUX2 = powerAUX2;
+	}
+
+	public int getPowerAUX3() {
+		return powerAUX3;
+	}
+
+	public void setPowerAUX3(int powerAUX3) {
+		this.powerAUX3 = powerAUX3;
+	}
+
+	public byte getBulbState() {
+		return bulbState;
+	}
+
+	public void setBulbState(byte bulbState) {
+		this.bulbState = bulbState;
+	}
+
+	public int getStepFOCUS() {
+		return stepFOCUS;
+	}
+
+	public void setStepFOCUS(int stepFOCUS) {
+		this.stepFOCUS = stepFOCUS;
+	}
+
+	public float getuStepFOCUS() {
+		return uStepFOCUS;
+	}
+
+	public void setuStepFOCUS(float uStepFOCUS) {
+		this.uStepFOCUS = uStepFOCUS;
+	}
+
+	public float getMoveSpeedFOCUS() {
+		return moveSpeedFOCUS;
+	}
+
+	public void setMoveSpeedFOCUS(float moveSpeedFOCUS) {
+		this.moveSpeedFOCUS = moveSpeedFOCUS;
+	}
+	
+	public double getFOCUS() {
+		return (double)stepFOCUS + (double)uStepFOCUS/1024.;
+	}
 	
 }

@@ -88,13 +88,8 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 	private INDINumberElement guiderApertureE ; // GUIDER_APERTURE
 	private INDINumberElement guiderFocalLengthE ; // GUIDER_FOCAL_LENGTH
 	
-	private INDISwitchProperty focuserIntervalometerP; // FOCUSER_INTERVALOMETER
-	private INDISwitchElement focuserE; // FOCUSER
-	private INDISwitchElement intervalometerE; // INTERVALOMETER
-	
 	private INDINumberProperty intervalometerSettingsP;
 	private INDINumberElement exposureTimeE;
-	private INDINumberElement mirrorRaisingTimeE;
 	private INDINumberElement delayTimeE;
 	private INDINumberElement exposureNumberE;
 	
@@ -108,15 +103,14 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 	private INDISwitchElement focusInwardE; // FOCUS_INWARD
 	private INDISwitchElement focusOutwardE; // FOCUS_OUTWARD
 	
+	private INDISwitchProperty focusAbortMotionP; // FOCUS_ABORT_MOTION
+	private INDISwitchElement focusAbortE; // ABORT
+	
 	private INDINumberProperty relFocusPosP; // REL_FOCUS_POSITION
 	private INDINumberElement relFocusPosE ; // FOCUS_RELATIVE_POSITION
 	
 	private INDINumberProperty absFocusPosP; // ABS_FOCUS_POSITION
 	private INDINumberElement absFocusPosE ; // FOCUS_ABSOLUTE_POSITION
-	
-	private INDINumberProperty servoP; // SERVO
-	private INDINumberElement currentTicksE ; // CURRENT_TICKS
-	private INDINumberElement neutralTicksE ; // CURRENT_TICKS
 	
 	private INDISwitchProperty trackRateP; // TELESCOPE_TRACK_RATE
 	private INDISwitchElement trackSideralE; // TRACK_SIDEREAL
@@ -160,13 +154,14 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 	private INDINumberElement currentRARateE;
 	private INDINumberElement trackingRateE;
 	
-	private INDITextProperty infoP;
-	private INDITextElement buildDateE;
-	private INDITextElement classNameE;
-	
 	private INDINumberProperty powerP;
 	private INDINumberElement powerRAE;
 	private INDINumberElement powerDEE;
+	
+	private INDINumberProperty powerAuxP;
+	private INDINumberElement powerAux1E;
+	private INDINumberElement powerAux2E;
+	private INDINumberElement powerAux3E;
 
 	
 	protected StatusMessage lastStatusMessage;
@@ -184,9 +179,14 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 	private double trackSpeed = 1;
 	private double slewDESpeed = 0;
 	private double slewRASpeed = 0;
+	private double slewFOCUSSpeed = 0;
 	private double powerHA = 1;
 	private double powerDE = 1;
+	private double powerFOCUS = 1;
 	private Date lastGotoUpdate;
+	
+	Timer intervalometer;
+	TimerTask currentTask;	
 	
 
 	/**
@@ -299,41 +299,34 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		timedGuideWE = new INDINumberElement(timedGuideWEP, "TIMED_GUIDE_W", "West (ms)", 0, 0., 5000, 0,"%4.0f"); // TIMED_GUIDE_W
 		timedGuideEE = new INDINumberElement(timedGuideWEP, "TIMED_GUIDE_E", "East (ms)", 0, 0., 5000, 0,"%4.0f"); // TIMED_GUIDE_E
 		
-		servoP = new INDINumberProperty(this, "SERVO", "Servo", "Focuser / intervalometer",
-				Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW);
-		currentTicksE = new INDINumberElement(servoP, "CURRENT_TICKS", "Current ticks", 0, 0., 3800, 1,"%4.0f");
-		neutralTicksE = new INDINumberElement(servoP, "NEUTRAL_TICKS", "Neutral ticks", 2000, 0., 3800, 1,"%4.0f");
-
-		focuserIntervalometerP = new INDISwitchProperty(this, "FOCUSER_INTERVALOMETER", "Auxiliary port mode", "Focuser / intervalometer",
-				Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW, Constants.SwitchRules.AT_MOST_ONE); // FOCUSER_INTERVALOMETER
-		focuserE = new INDISwitchElement(focuserIntervalometerP, "FOCUSER", "Focuser", Constants.SwitchStatus.OFF); // FOCUSER
-		intervalometerE = new INDISwitchElement(focuserIntervalometerP, "INTERVALOMETER", "Intervalometer", Constants.SwitchStatus.OFF); // INTERVALOMETER
-		
-		intervalometerSettingsP = new INDINumberProperty(this, "INTERVALOMETER_SETTINGS", "Intervalometer settings", "Focuser / intervalometer",
+		intervalometerSettingsP = new INDINumberProperty(this, "INTERVALOMETER_SETTINGS", "Intervalometer settings", "Auxiliary",
 				Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW);
 		exposureTimeE = new INDINumberElement(intervalometerSettingsP, "EXPOSURE_TIME", "Exposure time", 30, 0.001, 3600, 0,"%7.2f");
-		mirrorRaisingTimeE = new INDINumberElement(intervalometerSettingsP, "MIRROR_RAISING_TIME", "Mirror raising time", 0, 0, 3600, 0,"%7.2f");
 		delayTimeE = new INDINumberElement(intervalometerSettingsP, "DELAY_TIME", "Delay", 1, 0.001, 3600, 0,"%7.2f");
 		exposureNumberE = new INDINumberElement(intervalometerSettingsP, "EXPOSURE_NUMBER", "Exposure number", 999, 0, 999999, 1,"%6.0f");
 		
-		focusSpeedP = new INDINumberProperty(this, "FOCUS_SPEED", "Focus speed", "Focuser / intervalometer",
+		focusSpeedP = new INDINumberProperty(this, "FOCUS_SPEED", "Focus speed", "Auxiliary",
 				Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW); // FOCUS_SPEED
-		focusSpeedE = new INDINumberElement(focusSpeedP, "FOCUS_SPEED_VALUE", "Speed", 100, -2000, 2000, 1,"%4.0f"); // FOCUS_SPEED_VALUE
+		focusSpeedE = new INDINumberElement(focusSpeedP, "FOCUS_SPEED_VALUE", "Speed", 1, -2000, 2000, 1,"%7.2f"); // FOCUS_SPEED_VALUE
 		
-		focusTimerP = new INDINumberProperty(this, "FOCUS_TIMER", "Focus timer", "Focuser / intervalometer",
+		focusTimerP = new INDINumberProperty(this, "FOCUS_TIMER", "Focus timer", "Auxiliary",
 				Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW); // FOCUS_TIMER
-		focusTimerE = new INDINumberElement(focusTimerP, "FOCUS_TIMER_VALUE", "Duration", 1, 0, 60, 0,"%5.2f"); // FOCUS_TIMER_VALUE
+		focusTimerE = new INDINumberElement(focusTimerP, "FOCUS_TIMER_VALUE", "Duration", 1, 0, 1e9, 0,"%5.2f"); // FOCUS_TIMER_VALUE
 
-		focusMotionP = new INDISwitchProperty(this, "FOCUS_MOTION", "Focus motion", "Focuser / intervalometer",
+		focusMotionP = new INDISwitchProperty(this, "FOCUS_MOTION", "Focus motion", "Auxiliary",
 				Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW, Constants.SwitchRules.ONE_OF_MANY); // FOCUS_MOTION
 		focusInwardE = new INDISwitchElement(focusMotionP, "FOCUS_INWARD", "Inward", Constants.SwitchStatus.ON); // FOCUS_INWARD
 		focusOutwardE = new INDISwitchElement(focusMotionP, "FOCUS_OUTWARD", "Outward", Constants.SwitchStatus.OFF); // FOCUS_OUTWARD
 		
-		relFocusPosP = new INDINumberProperty(this, "REL_FOCUS_POSITION", "Relative position", "Focuser / intervalometer",
+		focusAbortMotionP = new INDISwitchProperty(this, "FOCUS_ABORT_MOTION", "Focus abort", "Auxiliary",
+				Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW, Constants.SwitchRules.ANY_OF_MANY); // FOCUS_ABORT_MOTION
+		focusAbortE = new INDISwitchElement(focusAbortMotionP, "ABORT", "Abort", Constants.SwitchStatus.OFF); // ABORT
+		
+		relFocusPosP = new INDINumberProperty(this, "REL_FOCUS_POSITION", "Relative position", "Auxiliary",
 				Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW); // REL_FOCUS_POSITION
 		relFocusPosE = new INDINumberElement(relFocusPosP, "FOCUS_RELATIVE_POSITION", "Rel position", 0, -1e9, 1e9, 0,"%7.2f"); // FOCUS_RELATIVE_POSITION
 		
-		absFocusPosP = new INDINumberProperty(this, "ABS_FOCUS_POSITION", "Absolute position", "Focuser / intervalometer",
+		absFocusPosP = new INDINumberProperty(this, "ABS_FOCUS_POSITION", "Absolute position", "Auxiliary",
 				Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW); // ABS_FOCUS_POSITION
 		absFocusPosE = new INDINumberElement(absFocusPosP, "FOCUS_ABSOLUTE_POSITION", "Abs position", 0, -1e9, 1e9, 0,"%7.2f"); // FOCUS_ABSOLUTE_POSITION
 		
@@ -345,29 +338,15 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		trackCustomE = new INDISwitchElement(trackRateP, "TRACK_CUSTOM", "Off", Constants.SwitchStatus.OFF); // TRACK_CUSTOM
 		trackSpeed = 1;
 		
-		powerP = new INDINumberProperty(this, "MOTOR_POWER", "Motor Power", "Motion Control", Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW);		
+		powerP = new INDINumberProperty(this, "MOTOR_POWER", "Motor power", "Motion Control", Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW);		
 		powerRAE = new INDINumberElement(powerP, "POWER_RA", "RA power", 1, -9.99, 9.99, 0,"%7.2f");
 		powerDEE = new INDINumberElement(powerP, "POWER_DE", "DE power", 1, -9.99, 9.99, 0,"%7.2f");
 		
-		/*infoP = new INDITextProperty(this, "INFO", "Info", "Info", Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RO);
-		String buildDate;
-		try {
-			buildDate = (new Date(new File(getClass().getClassLoader().getResource(getClass().getCanonicalName().replace('.', '/') + ".class").toURI()).lastModified())).toString();
-		} catch (Exception e) {
-			buildDate = "Error";
-			e.printStackTrace();
-		}
-		buildDateE = new INDITextElement(infoP, "BUILD_DATE", "Build date", buildDate);
-		String className;
-		try {
-			className = this.getClass().toString();
-		}
-		catch (Exception e) {
-			className = "Error";
-			e.printStackTrace();
-		}
-		classNameE = new INDITextElement(infoP, "CLASS_NAME", "Class name", className);
-		addProperty(infoP);*/
+		powerAuxP = new INDINumberProperty(this, "AUX_POWER", "Auxiliary supplies power", "Auxiliary", Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW);		
+		powerAux1E = new INDINumberElement(powerAuxP, "POWER_AUX1", "Aux1 Power", 0, 0, 100, 1,"%3.0f");
+		powerAux2E = new INDINumberElement(powerAuxP, "POWER_AUX2", "Aux2 Power", 0, 0, 100, 1,"%3.0f");
+		powerAux3E = new INDINumberElement(powerAuxP, "POWER_AUX3", "Aux3 Power", 0, 0, 100, 1,"%3.0f");
+		
 		
 		// --- Remaining initializations ---
 
@@ -609,22 +588,6 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 				}
 			}
 			
-			// --- Servo ---
-			if (property == servoP) {
-				for (int i = 0; i < elementsAndValues.length; i++) {
-					INDINumberElement el = elementsAndValues[i].getElement();
-					double val = elementsAndValues[i].getValue();
-					if (el == neutralTicksE) {
-						el.setValue(val);
-						servoP.setState(PropertyStates.OK);
-					}
-				}
-				try {
-					updateProperty(servoP);
-				} catch (INDIException e) {
-					e.printStackTrace();
-				}
-			}
 			
 			// --- Intervalometer ---
 			if (property == intervalometerSettingsP) {
@@ -636,7 +599,7 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 					el.setValue(val);
 					
 					if(el == exposureNumberE){
-						resetIntervalometer();
+						startIntervalometer();
 					}
 				}
 				try {
@@ -821,7 +784,7 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 					timer.schedule(task, (long)val);
 				}			
 			}
-			
+			 // --- Focus ---
 			if (property == focusSpeedP) {
 				for (int i = 0; i < elementsAndValues.length; i++) {
 					INDINumberElement el = elementsAndValues[i].getElement();
@@ -860,7 +823,7 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 					double val = elementsAndValues[i].getValue();
 					if (el == relFocusPosE) {
 						el.setValue(val);
-						relFocusPosP.setState(PropertyStates.OK);
+						
 						double duration = val / focusSpeedE.getValue();
 						focusTimerE.setValue(Math.abs(duration));
 						moveFocus(Math.abs(duration), (int) (focusSpeedE.getValue() * (duration > 0 ? 1 : -1)),relFocusPosP);
@@ -886,6 +849,26 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 				}
 				try {
 					updateProperty(absFocusPosP);
+					updateProperty(focusTimerP);
+				} catch (INDIException e) {
+					e.printStackTrace();
+				}
+			}
+			
+			// --- Aux power supply ---
+			if (property == powerAuxP) {
+				for (int i = 0; i < elementsAndValues.length; i++) {
+					INDINumberElement el = elementsAndValues[i].getElement();
+					double val = elementsAndValues[i].getValue();
+					el.setValue(val);
+				}
+				command.setPowerAUX1((int) Math.round(powerAux1E.getValue()*256./100.));
+				command.setPowerAUX2((int) Math.round(powerAux2E.getValue()*256./100.));
+				command.setPowerAUX3((int) Math.round(powerAux3E.getValue()*256./100.));
+				sendCommand();
+				powerAuxP.setState(PropertyStates.OK);
+				try {
+					updateProperty(powerAuxP);
 				} catch (INDIException e) {
 					e.printStackTrace();
 				}
@@ -901,6 +884,8 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 			}
 		}
 
+		
+		
 	}
 
 	/**
@@ -1103,71 +1088,6 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 				}
 			}
 	
-			if (property == focuserIntervalometerP) {
-	
-				if (elementsAndValues.length != 2) {
-					printMessage("elementsAndValues.length!=2");
-					return;
-				}
-	
-				if (focuserE.getValue() == SwitchStatus.ON) {
-					if ((elementsAndValues[0].getElement() == intervalometerE && elementsAndValues[0].getValue() == SwitchStatus.ON)
-							|| (elementsAndValues[1].getElement() == intervalometerE && elementsAndValues[1].getValue() == SwitchStatus.ON)) {
-						focuserE.setValue(SwitchStatus.OFF);
-						intervalometerE.setValue(SwitchStatus.ON);
-						disableFocuser();
-						activeIntervalometer();
-					} else if ((elementsAndValues[0].getElement() == focuserE && elementsAndValues[0].getValue() == SwitchStatus.OFF)
-							|| (elementsAndValues[1].getElement() == focuserE && elementsAndValues[1].getValue() == SwitchStatus.OFF)) {
-						focuserE.setValue(SwitchStatus.OFF);
-						disableFocuser();
-	
-					}
-				} else if (intervalometerE.getValue() == SwitchStatus.ON) {
-					if ((elementsAndValues[0].getElement() == focuserE && elementsAndValues[0].getValue() == SwitchStatus.ON)
-							|| (elementsAndValues[1].getElement() == focuserE && elementsAndValues[1].getValue() == SwitchStatus.ON)) {
-						intervalometerE.setValue(SwitchStatus.OFF);
-						focuserE.setValue(SwitchStatus.ON);
-						activeFocuser();
-						disableIntervalometer();
-					} else if ((elementsAndValues[0].getElement() == intervalometerE && elementsAndValues[0].getValue() == SwitchStatus.OFF)
-							|| (elementsAndValues[1].getElement() == intervalometerE && elementsAndValues[1].getValue() == SwitchStatus.OFF)) {
-						intervalometerE.setValue(SwitchStatus.OFF);
-						disableIntervalometer();
-					}
-				} else {
-					if (elementsAndValues[0].getValue() == SwitchStatus.ON) {
-						elementsAndValues[0].getElement().setValue(SwitchStatus.ON);
-						if(elementsAndValues[0].getElement()==intervalometerE){
-							activeIntervalometer();
-						}else{
-							activeFocuser();
-						}
-					} else if (elementsAndValues[1].getValue() == SwitchStatus.ON) {
-						elementsAndValues[1].getElement().setValue(SwitchStatus.ON);
-						if(elementsAndValues[1].getElement()==intervalometerE){
-							activeIntervalometer();
-						}else{
-							activeFocuser();
-						}
-					}
-				}
-	
-				if (focuserE.getValue() == SwitchStatus.ON || intervalometerE.getValue() == SwitchStatus.ON){
-					focuserIntervalometerP.setState(PropertyStates.OK);
-				}else{
-					focuserIntervalometerP.setState(PropertyStates.IDLE);
-				}
-	
-	
-				try {
-					updateProperty(focuserIntervalometerP);
-				} catch (INDIException e) {
-					e.printStackTrace();
-				}
-				
-				
-			}
 			
 			
 			if (property == trackRateP) {
@@ -1239,7 +1159,6 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 						focusOutwardE.setValue(SwitchStatus.OFF);
 						el.setValue(SwitchStatus.ON);
 						focusMotionP.setState(PropertyStates.OK);
-	
 					}
 	
 				}
@@ -1249,6 +1168,28 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 					e.printStackTrace();
 				}
 			}
+			
+			if (property == focusAbortMotionP) {
+				focusMotionP.setState(PropertyStates.IDLE);
+				for (int i = 0; i < elementsAndValues.length; i++) {
+					INDISwitchElement el = elementsAndValues[i].getElement();
+					SwitchStatus val = elementsAndValues[i].getValue();
+					if (val == SwitchStatus.ON) {
+						command.setSpeedFOCUS(0.f);
+						command.setPowerFOCUS(0.f);
+						sendCommand();
+						focusAbortMotionP.setState(PropertyStates.OK);
+					}
+
+				}
+				try {
+					updateProperty(focusMotionP);
+					updateProperty(focusAbortMotionP);
+				} catch (INDIException e) {
+					e.printStackTrace();
+				}
+			}
+			
 		}catch(IllegalArgumentException e){
 			printMessage(e.getMessage());
 			property.setState(PropertyStates.ALERT);
@@ -1335,10 +1276,17 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		addProperty(currentRateP);
 		addProperty(timedGuideNSP);
 		addProperty(timedGuideWEP);
-		addProperty(servoP);
-		addProperty(focuserIntervalometerP);
 		addProperty(trackRateP);
 		addProperty(powerP);
+		addProperty(focusMotionP);
+		addProperty(focusAbortMotionP);
+		addProperty(focusSpeedP);
+		addProperty(focusTimerP);
+		addProperty(relFocusPosP);
+		addProperty(absFocusPosP);
+		addProperty(intervalometerSettingsP);
+		addProperty(powerAuxP);
+		initIntervalometer();
 		
 		syncCoordHA = getSiderealTime();
 		syncStepHA = 0;
@@ -1374,8 +1322,6 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		removeProperty(currentRateP);
 		removeProperty(timedGuideNSP);
 		removeProperty(timedGuideWEP);
-		removeProperty(servoP);
-		removeProperty(focuserIntervalometerP);
 		removeProperty(focusMotionP);
 		removeProperty(focusSpeedP);
 		removeProperty(focusTimerP);
@@ -1383,6 +1329,14 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		removeProperty(absFocusPosP);
 		removeProperty(trackRateP);
 		removeProperty(powerP);
+		removeProperty(focusMotionP);
+		removeProperty(focusAbortMotionP);
+		removeProperty(focusSpeedP);
+		removeProperty(focusTimerP);
+		removeProperty(relFocusPosP);
+		removeProperty(absFocusPosP);
+		removeProperty(intervalometerSettingsP);
+		removeProperty(powerAuxP);
 	}
 
 	/**
@@ -1459,17 +1413,17 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 
 
 		eqCoordRAE.setValue(getRA2());
-		System.out.println("getRA2()=" + getRA2());
+		//System.out.println("getRA2()=" + getRA2());
 		eqCoordDEE.setValue(getDE2());
-		System.out.println("getDE2()=" + getDE2());
-		currentTicksE.setValue((double)lastStatusMessage.getTicks());
-		command.setTicks(lastStatusMessage.getTicks());
+		//System.out.println("getDE2()=" + getDE2());
+		absFocusPosE.setValue(lastStatusMessage.getFOCUS());
+
 		
 		gotoUpdate();
 
 		try {
 			updateProperty(eqCoordP);
-			updateProperty(servoP);
+			updateProperty(absFocusPosP);
 		} catch (INDIException e) {
 			e.printStackTrace();
 		}
@@ -1596,17 +1550,19 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 	 * @param time duration of the move in s
 	 * @param speed negative or positive speed
 	 */
-	private void moveFocus(final double duration, final double speed, final INDIProperty prop){
-		updateTicks((int) (neutralTicksE.getValue() + speed));
+	private void moveFocus(final double duration, final float speed, final INDIProperty prop){
+		command.setSpeedFOCUS(speed);
+		command.setPowerFOCUS(1.f);
+		sendCommand();
 		TimerTask task = new TimerTask(){
 			@Override
 			public void run() {
-				updateTicks(CmdMessage.TICKS_OFF);
+				command.setSpeedFOCUS(0.f);
+				command.setPowerFOCUS(0.f);
+				sendCommand();
 				prop.setState(PropertyStates.OK);
-				absFocusPosE.setValue(absFocusPosE.getValue()+speed*duration);
 				try {
 					updateProperty(prop);
-					updateProperty(absFocusPosP);
 				} catch (INDIException e) {
 					e.printStackTrace();
 				}
@@ -1615,109 +1571,47 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		Timer timer = new Timer();
 		timer.schedule(task, (long) (duration*1000));
 		
-		prop.setState(PropertyStates.IDLE);
+		prop.setState(PropertyStates.BUSY);
 		try {
-			updateProperty(focusTimerP);
+			updateProperty(prop);
 		} catch (INDIException e) {
 			e.printStackTrace();
 		}
 		
 	}
 	
-	private void activeFocuser(){
-		addProperty(focusMotionP);
-		addProperty(focusSpeedP);
-		addProperty(focusTimerP);
-		addProperty(relFocusPosP);
-		addProperty(absFocusPosP);
-	}
-	
-	private void disableFocuser(){
-		removeProperty(focusMotionP);
-		removeProperty(focusSpeedP);
-		removeProperty(focusTimerP);
-		removeProperty(relFocusPosP);
-		removeProperty(absFocusPosP);
-	}
-	
-	private void activeIntervalometer(){
-		addProperty(intervalometerSettingsP);
-		initIntervalometer();
-	}
-	
-	private void disableIntervalometer(){
-		removeProperty(intervalometerSettingsP);
-		stopIntervalometer();
-	}
 	
 
-	Timer intervalometer;
-	
 
-	TimerTask currentTask;	
 	
 
 	
 	private void initIntervalometer(){
 		intervalometer = new Timer();
-		
-		
 	}
 	
 	private void startIntervalometer(){
-		printMessage("Start");
-		currentTask = new CompleteTask();
-		updateTicks(CmdMessage.TICKS_OFF);
+		intervalometer.cancel();
+		intervalometer = new Timer();
+		command.disableBulb();
+		sendCommand();
 
-		intervalometerSettingsP.setState(PropertyStates.BUSY);
-		try {
-			updateProperty(intervalometerSettingsP);
-		} catch (INDIException e) {
-			e.printStackTrace();
-		}
-		
 		double n = exposureNumberE.getValue();
 		if(n>0){
-			if(mirrorRaisingTimeE.getValue()>0.1){
-				intervalometer.schedule(new MirrorRaisingTask(), 100);
-			}else{
-				intervalometer.schedule(new ExposeTask(), 100);
-			}
-		}else{
-			intervalometerSettingsP.setState(PropertyStates.OK);
+			intervalometerSettingsP.setState(PropertyStates.BUSY);
 			try {
 				updateProperty(intervalometerSettingsP);
 			} catch (INDIException e) {
 				e.printStackTrace();
 			}
+			currentTask = new CompleteTask();
+			intervalometer.schedule(new ExposeTask(), 100);
 		}
 	}
 	
-	private void stopIntervalometer(){
-		printMessage("Stop");
-		intervalometer.cancel();
-		intervalometer = new Timer();
-		updateTicks(CmdMessage.TICKS_OFF);
-
-	}
-	private void resetIntervalometer(){
-		printMessage("Stop");
-		intervalometer.cancel();
-		intervalometer = new Timer();
-		startIntervalometer();
-	}
 	
     
-	private void updateTicks(int ticks){
-		command.setTicks(ticks);
-		sendCommand();
-		currentTicksE.setValue((double)ticks);
-		try {
-			updateProperty(servoP);
-		} catch (INDIException e) {
-			e.printStackTrace();
-		}
-	}
+
 	
 	/**
 	 * On German equatorial mounts, a given celestial position can be pointed in
@@ -1750,41 +1644,24 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 			e.printStackTrace();
 		}
 	}
-
-	private class MirrorReleaseTask extends TimerTask{
-		@Override
-		public void run() {
-			printMessage("MirrorRelease");
-			currentTask = this;
-			updateTicks(CmdMessage.TICKS_OFF);
-
-			intervalometer.schedule(new ExposeTask(), (long)(mirrorRaisingTimeE.getValue()*1000)-100);
-		}
-		
-	}
-	
-	private class MirrorRaisingTask extends TimerTask{
-		@Override
-		public void run() {
-			printMessage("MirrorRaising");
-			currentTask = this;
-			updateTicks(CmdMessage.TICKS_EXPOSE_FOCUS);
-
-			intervalometer.schedule(new MirrorReleaseTask(), 100);
-		}
-		
-	}
-	
-
 	
 	private class ExposeTask extends TimerTask{
 		@Override
 		public void run() {
 			printMessage("Expose");
 			currentTask = this;
-			updateTicks(CmdMessage.TICKS_EXPOSE_FOCUS);
+			
+			command.enableBulb();
+			sendCommand();
 
 			intervalometer.schedule(new CompleteTask(), (long)(exposureTimeE.getValue()*1000));
+			
+			intervalometerSettingsP.setState(PropertyStates.ALERT);
+			try {
+				updateProperty(intervalometerSettingsP);
+			} catch (INDIException e) {
+				e.printStackTrace();
+			}
 		}
 		
 	}
@@ -1794,32 +1671,23 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		public void run() {
 			printMessage("Complete");
 			currentTask = this;
-			updateTicks(CmdMessage.TICKS_OFF);
-			
+			command.disableBulb();
+			sendCommand();			
 			
 			double n = exposureNumberE.getValue();
 			n=n-1;
 			exposureNumberE.setValue(n);
+			if(n>0){
+				intervalometer.schedule(new ExposeTask(),  (long)(delayTimeE.getValue()*1000));
+				intervalometerSettingsP.setState(PropertyStates.BUSY);
+			}else{
+				intervalometerSettingsP.setState(PropertyStates.OK);
+			}
 			try {
 				updateProperty(intervalometerSettingsP);
 			} catch (INDIException e) {
 				e.printStackTrace();
 			}
-			if(n>0){
-				if(mirrorRaisingTimeE.getValue()>0.1){
-					intervalometer.schedule(new MirrorRaisingTask(),  (long)(delayTimeE.getValue()*1000));
-				}else{
-					intervalometer.schedule(new ExposeTask(),  (long)(delayTimeE.getValue()*1000));
-				}
-			}else{
-				intervalometerSettingsP.setState(PropertyStates.OK);
-				try {
-					updateProperty(intervalometerSettingsP);
-				} catch (INDIException e) {
-					e.printStackTrace();
-				}
-			}
-			
 		}
 		
 	};

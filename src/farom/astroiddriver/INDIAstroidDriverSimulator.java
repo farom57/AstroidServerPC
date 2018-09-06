@@ -26,14 +26,20 @@ public class INDIAstroidDriverSimulator extends INDIAstroidDriver {
 	private int ms_count=0;
 	private int step_ha=0;
 	private int step_de=0;
+	private int step_focus=0;
 	private float ustep_ha=0;
 	private float ustep_de=0;
+	private float ustep_focus=0;
 	private float move_speed_ha=1;
 	private float move_speed_de=0;
-	private int ticks_servo = 0;
+	private float move_speed_focus=0;
+	private int power_aux1=0;
+	private int power_aux2=0;
+	private int power_aux3=0;
+	private byte bulb_state=0;
 	
-	private float speed_ha=SIDERAL_RATE*move_speed_ha;
-	private float speed_de=SIDERAL_RATE*move_speed_de;
+	
+
 	
 	private boolean connected = false;
 	
@@ -65,7 +71,7 @@ public class INDIAstroidDriverSimulator extends INDIAstroidDriver {
 	}
 
 	protected void sendStatus() {
-		lastStatusMessage = new StatusMessage(ms_count, step_ha, step_de, ustep_ha, ustep_de, move_speed_ha, move_speed_de,ticks_servo, 1, 1);
+		lastStatusMessage = new StatusMessage(ms_count, step_ha, step_de, ustep_ha, ustep_de, move_speed_ha, move_speed_de, 1.f, 1.f, power_aux1, power_aux2, power_aux3, bulb_state, step_focus, ustep_focus, move_speed_focus);
 		//printMessage(lastStatusMessage.toString());
 		updateStatus();
 		
@@ -74,9 +80,11 @@ public class INDIAstroidDriverSimulator extends INDIAstroidDriver {
 	protected void updateStep() {
 	    float speed_ha=SIDERAL_RATE*move_speed_ha;
 	    float speed_de=SIDERAL_RATE*move_speed_de;
+	    float speed_focus=move_speed_focus;
 	    
 	    ustep_ha+=speed_ha*UPDATE_TIME*1024.;
 	    ustep_de+=speed_de*UPDATE_TIME*1024.;
+	    ustep_focus+=speed_focus*UPDATE_TIME*1024.;
 
 	    if(ustep_ha>=1024.){
 	        ustep_ha-=1024.;
@@ -94,6 +102,15 @@ public class INDIAstroidDriverSimulator extends INDIAstroidDriver {
 	        ustep_de+=1024.;
 	        step_de--;
 	    }
+	    if(ustep_focus>=1024.){
+	        ustep_focus-=1024.;
+	        step_focus++;
+	    }
+	    if(ustep_focus<0.){
+	        ustep_focus+=1024.;
+	        step_focus--;
+	    }
+	    
 		
 	    ms_count+=UPDATE_TIME_MS;
 	}
@@ -116,7 +133,7 @@ public class INDIAstroidDriverSimulator extends INDIAstroidDriver {
 	protected void sendCommand() {
 		move_speed_ha = command.getSpeedHA();
 		move_speed_de = command.getSpeedDE();
-		ticks_servo = command.getTicks();
+		move_speed_focus = command.getSpeedFOCUS();
 		
 	}
 	
