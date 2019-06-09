@@ -46,7 +46,7 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 	 * sideral rate in arcmin/sec
 	 */
 	private static final double SIDERAL_RATE = 360. * 60. / 86164.09053;
-
+	private static final double SIDERAL_RATE_ASEC = SIDERAL_RATE*60.;
 
 
 	private INDINumberProperty geographicCoordP; // GEOGRAPHIC_COORD
@@ -112,13 +112,15 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 	private INDINumberProperty absFocusPosP; // ABS_FOCUS_POSITION
 	private INDINumberElement absFocusPosE ; // FOCUS_ABSOLUTE_POSITION
 	
-	private INDISwitchProperty trackRateP; // TELESCOPE_TRACK_RATE
+	private INDISwitchProperty trackModeP; // TELESCOPE_TRACK_MODE
 	private INDISwitchElement trackSideralE; // TRACK_SIDEREAL
 	private INDISwitchElement trackSolarE; // TRACK_SOLAR
 	private INDISwitchElement trackLunarE; // TRACK_LUNAR
 	private INDISwitchElement trackCustomE; // TRACK_CUSTOM
 	
-
+	private INDINumberProperty trackRateP; // TELESCOPE_TRACK_RATE
+	private INDINumberElement trackRateRAE; // TELESCOPE_TRACK_RATE
+	private INDINumberElement trackRateDEE; // TELESCOPE_TRACK_RATE
 	
 	/**
 	 * On German equatorial mounts, a given celestial position can be pointed in
@@ -176,7 +178,8 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 	private boolean gotoActive;
 	
 	private double motionSpeed;
-	private double trackSpeed = 1;
+	private double trackSpeedHA = 1;
+	private double trackSpeedDE = 0;
 	private double slewDESpeed = 0;
 	private double slewRASpeed = 0;
 	private double slewFOCUSSpeed = 0;
@@ -330,13 +333,13 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 				Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW); // ABS_FOCUS_POSITION
 		absFocusPosE = new INDINumberElement(absFocusPosP, "FOCUS_ABSOLUTE_POSITION", "Abs position", 0, -1e9, 1e9, 0,"%7.2f"); // FOCUS_ABSOLUTE_POSITION
 		
-		trackRateP = new INDISwitchProperty(this, "TELESCOPE_TRACK_RATE", "Track rate", "Motion Control",
+		trackModeP = new INDISwitchProperty(this, "TELESCOPE_TRACK_MODE", "Track mode", "Motion Control",
 				Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW, Constants.SwitchRules.ONE_OF_MANY); // TELESCOPE_TRACK_RATE
-		trackSideralE = new INDISwitchElement(trackRateP, "TRACK_SIDEREAL", "Sidereal", Constants.SwitchStatus.ON); // TRACK_SIDEREAL
-		trackSolarE = new INDISwitchElement(trackRateP, "TRACK_SOLAR", "Solar", Constants.SwitchStatus.OFF); // TRACK_SOLAR
-		trackLunarE = new INDISwitchElement(trackRateP, "TRACK_LUNAR", "Lunar", Constants.SwitchStatus.OFF); // TRACK_LUNAR
-		trackCustomE = new INDISwitchElement(trackRateP, "TRACK_CUSTOM", "Off", Constants.SwitchStatus.OFF); // TRACK_CUSTOM
-		trackSpeed = 1;
+		trackSideralE = new INDISwitchElement(trackModeP, "TRACK_SIDEREAL", "Sidereal", Constants.SwitchStatus.ON); // TRACK_SIDEREAL
+		trackSolarE = new INDISwitchElement(trackModeP, "TRACK_SOLAR", "Solar", Constants.SwitchStatus.OFF); // TRACK_SOLAR
+		trackLunarE = new INDISwitchElement(trackModeP, "TRACK_LUNAR", "Lunar", Constants.SwitchStatus.OFF); // TRACK_LUNAR
+		trackCustomE = new INDISwitchElement(trackModeP, "TRACK_CUSTOM", "Custom", Constants.SwitchStatus.OFF); // TRACK_CUSTOM
+		trackSpeedHA = 1;
 		
 		powerP = new INDINumberProperty(this, "MOTOR_POWER", "Motor power", "Motion Control", Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW);		
 		powerRAE = new INDINumberElement(powerP, "POWER_RA", "RA power", 1, -9.99, 9.99, 0,"%7.2f");
@@ -346,6 +349,13 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		powerAux1E = new INDINumberElement(powerAuxP, "POWER_AUX1", "Aux1 Power", 0, 0, 100, 1,"%3.0f");
 		powerAux2E = new INDINumberElement(powerAuxP, "POWER_AUX2", "Aux2 Power", 0, 0, 100, 1,"%3.0f");
 		powerAux3E = new INDINumberElement(powerAuxP, "POWER_AUX3", "Aux3 Power", 0, 0, 100, 1,"%3.0f");
+		
+		trackRateP = new INDINumberProperty(this, "TELESCOPE_TRACK_RATE", "Custom track rate", "Motion Control", Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW);		
+		trackRateRAE = new INDINumberElement(trackRateP, "TRACK_RATE_RA", "RA (arcsecs/sec)", SIDERAL_RATE_ASEC, -7200, 7200, 1,"%9.6f");
+		trackRateDEE = new INDINumberElement(trackRateP, "TRACK_RATE_DE", "DE (arcsecs/sec)", 0, -7200, 7200, 1,"%9.6f");
+		
+
+
 		
 		
 		// --- Remaining initializations ---
@@ -544,11 +554,32 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 					} else if (el == currentDERateE) {
 						slewDESpeed = val;
 					} else if (el == trackingRateE) {
-						trackSpeed = val;
+						trackSpeedHA = val;
 					}
 					
 				}
 				currentRateP.setState(PropertyStates.OK);
+				updateSpeed();
+				// "updateProperty" already performed in updateSpeed()
+
+			}
+			
+			// --- Custom track rate ---
+			if (property == trackRateP) {
+				trackRateP.setState(PropertyStates.BUSY);
+				if(trackCustomE.getValue()==SwitchStatus.ON) {
+					for (int i = 0; i < elementsAndValues.length; i++) {
+						INDINumberElement el = elementsAndValues[i].getElement();
+						double val = elementsAndValues[i].getValue();
+						if (el == trackRateRAE) {
+							trackSpeedHA = val/SIDERAL_RATE_ASEC;
+						} else if (el == trackRateDEE) {
+							trackSpeedDE = val/SIDERAL_RATE_ASEC;
+						}
+					}
+					
+				}
+				trackRateP.setState(PropertyStates.OK);
 				updateSpeed();
 				// "updateProperty" already performed in updateSpeed()
 
@@ -565,6 +596,7 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 					} else if (el == powerDEE) {
 						powerDE = val;
 					}
+					el.setValue(val);
 					
 				}
 				powerP.setState(PropertyStates.OK);
@@ -1090,8 +1122,8 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 	
 			
 			
-			if (property == trackRateP) {
-				trackRateP.setState(PropertyStates.IDLE);
+			if (property == trackModeP) {
+				trackModeP.setState(PropertyStates.IDLE);
 				for (int i = 0; i < elementsAndValues.length; i++) {
 					INDISwitchElement el = elementsAndValues[i].getElement();
 					SwitchStatus val = elementsAndValues[i].getValue();
@@ -1101,24 +1133,28 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 						trackLunarE.setValue(SwitchStatus.OFF);
 						trackCustomE.setValue(SwitchStatus.OFF);
 						el.setValue(SwitchStatus.ON);
-						trackRateP.setState(PropertyStates.OK);		
+						trackModeP.setState(PropertyStates.OK);		
 					}		
 				}
 
 				
 				if(trackSideralE.getValue()==SwitchStatus.ON){
-					trackSpeed = 1;
+					trackSpeedHA = 1;
+					trackSpeedDE = 0;
 				}else if(trackSolarE.getValue()==SwitchStatus.ON){
-					trackSpeed = 86164.0/86400.0;
+					trackSpeedHA = 86164.0/86400.0;
+					trackSpeedDE = 0;
 				}else if(trackLunarE.getValue()==SwitchStatus.ON){
-					trackSpeed = 27.0/28.0;
+					trackSpeedHA = 27.0/28.0;
+					trackSpeedDE = 0;
 				}else{
-					trackSpeed = 0;
+					trackSpeedHA = trackRateRAE.getValue()/SIDERAL_RATE_ASEC;
+					trackSpeedDE = trackRateDEE.getValue()/SIDERAL_RATE_ASEC;
 				}
 				updateSpeed();
 				
 				try {
-					updateProperty(trackRateP);
+					updateProperty(trackModeP);
 				} catch (INDIException e) {
 					e.printStackTrace();
 				}
@@ -1276,7 +1312,7 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		addProperty(currentRateP);
 		addProperty(timedGuideNSP);
 		addProperty(timedGuideWEP);
-		addProperty(trackRateP);
+		addProperty(trackModeP);
 		addProperty(powerP);
 		addProperty(focusMotionP);
 		addProperty(focusAbortMotionP);
@@ -1286,6 +1322,7 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		addProperty(absFocusPosP);
 		addProperty(intervalometerSettingsP);
 		addProperty(powerAuxP);
+		addProperty(trackRateP);
 		initIntervalometer();
 		
 		syncCoordHA = getSiderealTime();
@@ -1327,7 +1364,7 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		removeProperty(focusTimerP);
 		removeProperty(relFocusPosP);
 		removeProperty(absFocusPosP);
-		removeProperty(trackRateP);
+		removeProperty(trackModeP);
 		removeProperty(powerP);
 		removeProperty(focusMotionP);
 		removeProperty(focusAbortMotionP);
@@ -1337,6 +1374,7 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		removeProperty(absFocusPosP);
 		removeProperty(intervalometerSettingsP);
 		removeProperty(powerAuxP);
+		removeProperty(trackRateP);
 	}
 
 	/**
@@ -1625,8 +1663,8 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 	private void updateSpeed(){
 		double speedDE, speedHA;
 		
-		speedDE = slewDESpeed * (sideEastE.getValue() == SwitchStatus.ON ? 1 : -1);
-		speedHA = trackSpeed-slewRASpeed; // because HA = LST-RA
+		speedDE = (trackSpeedDE+slewDESpeed) * (sideEastE.getValue() == SwitchStatus.ON ? 1 : -1);
+		speedHA = trackSpeedHA-slewRASpeed; // because HA = LST-RA
 		
 		command.setSpeedDE((float)speedDE);
 		command.setSpeedHA((float)speedHA);
@@ -1636,10 +1674,14 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		
 		currentRARateE.setValue(slewRASpeed);
 		currentDERateE.setValue(slewDESpeed);
-		trackingRateE.setValue(trackSpeed);
+		trackingRateE.setValue(trackSpeedHA);
+		trackRateRAE.setValue(trackSpeedHA*SIDERAL_RATE_ASEC);
+		trackRateDEE.setValue(trackSpeedDE*SIDERAL_RATE_ASEC);
 		currentRateP.setState(PropertyStates.OK);
+		trackRateP.setState(PropertyStates.OK);
 		try {
 			updateProperty(currentRateP);
+			updateProperty(trackRateP);
 		} catch (INDIException e) {
 			e.printStackTrace();
 		}

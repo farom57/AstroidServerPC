@@ -18,8 +18,8 @@ public class AstroidServerPC extends DefaultINDIServer {
     public AstroidServerPC(){
     	super();
     	try {
-            loadJavaDriver(INDIAstroidDriverJSSC.class);
-            //loadJavaDriver(INDIAstroidDriverSimulator.class);
+            //loadJavaDriver(INDIAstroidDriverJSSC.class);
+            loadJavaDriver(INDIAstroidDriverSimulator.class);
           } catch (INDIException e) {
             e.printStackTrace();
 
