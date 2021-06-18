@@ -239,8 +239,8 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 		
 		sideP = new INDISwitchProperty(this, "TELESCOPE_PIER_SIDE", "Telescope side", "Main Control",
 				Constants.PropertyStates.IDLE, Constants.PropertyPermissions.RW, Constants.SwitchRules.ONE_OF_MANY); // TELESCOPE_MOTION_WE
-		sideWestE = new INDISwitchElement(sideP, "PIER_EAST", "Pointing West", Constants.SwitchStatus.OFF);//Mount on the East side of pier (Pointing West).
-		sideEastE = new INDISwitchElement(sideP, "PIER_WEST", "Pointing East", Constants.SwitchStatus.ON);// Mount on the West side of pier (Pointing East).
+		sideWestE = new INDISwitchElement(sideP, "PIER_EAST", "Pointing West", Constants.SwitchStatus.ON);//Mount on the East side of pier (Pointing West).
+		sideEastE = new INDISwitchElement(sideP, "PIER_WEST", "Pointing East", Constants.SwitchStatus.OFF);// Mount on the West side of pier (Pointing East).
 
 		
 		onCoordSetP = new INDISwitchProperty(this, "ON_COORD_SET", "On Set", "Main Control",
@@ -894,9 +894,9 @@ public abstract class INDIAstroidDriver extends INDIDriver implements INDIConnec
 					double val = elementsAndValues[i].getValue();
 					el.setValue(val);
 				}
-				command.setPowerAUX1((int) Math.round(powerAux1E.getValue()*256./100.));
-				command.setPowerAUX2((int) Math.round(powerAux2E.getValue()*256./100.));
-				command.setPowerAUX3((int) Math.round(powerAux3E.getValue()*256./100.));
+				command.setPowerAUX1((int) Math.round(powerAux1E.getValue()*255./100.));
+				command.setPowerAUX2((int) Math.round(powerAux2E.getValue()*255./100.));
+				command.setPowerAUX3((int) Math.round(powerAux3E.getValue()*255./100.));
 				sendCommand();
 				powerAuxP.setState(PropertyStates.OK);
 				try {

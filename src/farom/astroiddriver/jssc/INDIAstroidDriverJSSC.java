@@ -5,6 +5,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.regex.Pattern;
 
 import farom.astroiddriver.CmdMessage;
 import farom.astroiddriver.INDIAstroidDriver;
@@ -44,18 +45,21 @@ public class INDIAstroidDriverJSSC extends INDIAstroidDriver implements SerialPo
 		devicePortP = new INDITextProperty(this, "DEVICE_PORT", "Port", "Main Control", Constants.PropertyStates.IDLE,
 				Constants.PropertyPermissions.RW);
 		String[] portNames = SerialPortList.getPortNames();
-		if (portNames.length > 0) {
-			devicePortE = new INDITextElement(devicePortP, "PORT", portNames[0]);
-			devicePortP.setState(PropertyStates.OK);
-			addProperty(devicePortP, "Serial port found : " + portNames[0]);
-			printMessage("Serial port found : " + portNames[0]);
-		} else {
-			devicePortE = new INDITextElement(devicePortP, "PORT", "/dev/tty???");
-			devicePortP.setState(PropertyStates.ALERT);
-			addProperty(devicePortP, "Serial port not found");
-			printMessage("Serial port not found");
+		
+		//Default
+		devicePortE = new INDITextElement(devicePortP, "PORT", "/dev/ttyS0");
+		devicePortP.setState(PropertyStates.ALERT);
+		
+		
+		for(int i=0; i<portNames.length; i++) {
+			if(Pattern.matches("/dev/ttyUSB.*",  portNames[i])) {
+				devicePortE = new INDITextElement(devicePortP, "PORT", portNames[i]);
+				devicePortP.setState(PropertyStates.OK);
+				printMessage("Serial port found : " + portNames[i]);
+			}
 		}
 		
+		addProperty(devicePortP);
 		buffer=ByteBuffer.allocate(255);
 	}
 	
@@ -184,13 +188,13 @@ public class INDIAstroidDriverJSSC extends INDIAstroidDriver implements SerialPo
 					buffer.compact();
 					if (StatusMessage.verify(localBuffer2)) {						
 						lastStatusMessage = new StatusMessage(localBuffer2);
-						System.out.println("Valid message:");
-						for (int i = 0; i < StatusMessage.MESSAGE_SIZE; i++) {
-							System.out.printf("%02X ", localBuffer2[i]);
-						}
-						System.out.println("");
-						System.out.println(lastStatusMessage);
-						System.out.println("/n");
+//						System.out.println("Valid message:");
+//						for (int i = 0; i < StatusMessage.MESSAGE_SIZE; i++) {
+//							System.out.printf("%02X ", localBuffer2[i]);
+//						}
+//						System.out.println("");
+//						System.out.println(lastStatusMessage);
+//						System.out.println("/n");
 						updateStatus();
 					}else {
 						System.out.println("Invalid message:");
